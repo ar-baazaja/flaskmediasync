@@ -11,7 +11,8 @@ Users can upload an image and an audio file, and the app compresses and returns 
 The image below shows the **output UI** after a successful upload of an image and audio file.  
 Once the user submits both files, the Flask backend compresses the image using OpenCV and returns it to the frontend, which then displays it in the browser.
 
-<img src="./capture.png" alt="Compressed image preview after upload" width="600"/>
+<img src="./Capture.PNG" alt="Compressed image preview after upload" width="600"/>
+
 ---
 ## 📁 Project Structure
 
