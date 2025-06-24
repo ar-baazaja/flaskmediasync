@@ -96,24 +96,5 @@ Let me know if you want step-by-step backend deployment on any of these.
 - RESTful API design
 - Fully responsive UI with Tailwind CSS
 
----
 
-## 🧠 Future Improvements
 
-- Add drag-and-drop upload
-- Add Socket.IO for live updates
-- Store metadata to a database
-- Add user authentication
-
----
-
-## 👤 Author
-
-**Arbaz Ahmed Awan**  
-GitHub: [@ar-baazaja](https://github.com/ar-baazaja)
-
----
-
-## 📄 License
-
-This project is open-sourced under the **MIT License**
