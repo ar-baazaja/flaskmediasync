@@ -42,4 +42,5 @@ def handle_upload(data):
     emit('processed_image', {'image': f'data:image/jpeg;base64,{jpg_as_text}'})
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), allow_unsafe_werkzeug=True)
+
