@@ -1,46 +1,48 @@
-from flask import Flask
-from flask_socketio import SocketIO, emit
+from flask import Flask, send_file
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+import os
 import cv2
 import numpy as np
 import base64
-import os
+from io import BytesIO
+from PIL import Image
 
 app = Flask(__name__)
 CORS(app)
-app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
-UPLOAD_FOLDER = 'uploads_socket'
+UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-@socketio.on('upload_media')
+def resize_image(image_bytes):
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    resized = cv2.resize(img_np, (200, 200))
+    _, buffer = cv2.imencode('.jpg', resized)
+    return buffer.tobytes()
+
+@socketio.on('upload_data')
 def handle_upload(data):
-    name = data.get('name')
-    email = data.get('email')
-    image_data = data.get('image')
-    audio_data = data.get('audio')
+    image_data = base64.b64decode(data['image'])
+    audio_data = base64.b64decode(data['audio'])
+    name = data['name']
+    email = data['email']
 
-    if not image_data:
-        emit('error', {'message': 'No image received'})
-        return
+    print(f"Received from {name} ({email})")
 
-    # Decode image
-    header, base64_data = image_data.split(',', 1)
-    img_bytes = base64.b64decode(base64_data)
-    np_arr = np.frombuffer(img_bytes, np.uint8)
-    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    # Save audio
+    audio_path = os.path.join(UPLOAD_FOLDER, f"{name}_audio.wav")
+    with open(audio_path, 'wb') as f:
+        f.write(audio_data)
 
-    # Resize/compress image
-    resized_img = cv2.resize(img, (300, 300))
-    compressed_path = os.path.join(UPLOAD_FOLDER, f"compressed_{name or 'output'}.jpg")
-    cv2.imwrite(compressed_path, resized_img)
+    # Process image
+    resized_image = resize_image(image_data)
 
-    # Encode compressed image as base64 to emit back
-    _, buffer = cv2.imencode('.jpg', resized_img)
-    jpg_as_text = base64.b64encode(buffer).decode('utf-8')
-    emit('processed_image', {'image': f'data:image/jpeg;base64,{jpg_as_text}'})
+    # Encode resized image to base64 to send back
+    image_base64 = base64.b64encode(resized_image).decode('utf-8')
+
+    emit('image_response', {'image': image_base64})
 
 if __name__ == '__main__':
-    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), allow_unsafe_werkzeug=True)
-
+    socketio.run(app, port=5000)
