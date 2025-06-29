@@ -1,7 +1,8 @@
-flask
-flask-cors
+Flask
 flask-socketio
 eventlet
-opencv-python
+flask-cors
+numpy
+opencv-python-headless
 gunicorn
 pillow
