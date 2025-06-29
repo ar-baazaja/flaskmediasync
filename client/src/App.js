@@ -1,61 +1,49 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState } from 'react';
+import { io } from 'socket.io-client';
+
+const socket = io("http://localhost:5000");
 
 function App() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [image, setImage] = useState(null);
   const [audio, setAudio] = useState(null);
-  const [resultImg, setResultImg] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [resizedImage, setResizedImage] = useState(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("email", email);
-    formData.append("image", image);
-    formData.append("audio", audio);
-
-    try {
-      const res = await axios.post("http://localhost:5000/upload", formData, {
-        responseType: "blob",
+  const handleSubmit = async () => {
+    const readFileAsBase64 = (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
-      setResultImg(URL.createObjectURL(res.data));
-    } catch (err) {
-      alert("Upload failed!");
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    const imageBase64 = await readFileAsBase64(image);
+    const audioBase64 = await readFileAsBase64(audio);
+
+    socket.emit('upload_data', {
+      image: imageBase64,
+      audio: audioBase64,
+      name,
+      email
+    });
   };
 
+  socket.on('image_response', (data) => {
+    setResizedImage(`data:image/jpeg;base64,${data.image}`);
+  });
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="bg-white shadow-lg rounded-xl p-8 max-w-md w-full">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Media Uploader</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="text" placeholder="Name" className="w-full p-2 border rounded"
-            onChange={(e) => setName(e.target.value)} required />
-          <input type="email" placeholder="Email" className="w-full p-2 border rounded"
-            onChange={(e) => setEmail(e.target.value)} required />
-          <input type="file" accept="image/*" className="w-full p-2 border rounded"
-            onChange={(e) => setImage(e.target.files[0])} required />
-          <input type="file" accept="audio/*" className="w-full p-2 border rounded"
-            onChange={(e) => setAudio(e.target.files[0])} required />
-          <button type="submit" disabled={loading}
-            className={`w-full py-2 px-4 rounded text-white ${loading ? "bg-gray-500" : "bg-blue-600 hover:bg-blue-700"}`}>
-            {loading ? "Uploading..." : "Upload"}
-          </button>
-        </form>
-        {resultImg && (
-          <div className="mt-6 text-center">
-            <h3 className="text-lg font-semibold mb-2">Compressed Image:</h3>
-            <img src={resultImg} alt="Compressed" className="rounded-lg border shadow mx-auto" />
-          </div>
-        )}
-      </div>
+    <div>
+      <h2>Upload Form</h2>
+      <input type="text" placeholder="Name" onChange={(e) => setName(e.target.value)} />
+      <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
+      <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
+      <input type="file" accept="audio/*" onChange={(e) => setAudio(e.target.files[0])} />
+      <button onClick={handleSubmit}>Send via Socket</button>
+      {resizedImage && <img src={resizedImage} alt="Resized" />}
     </div>
   );
 }
